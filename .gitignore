@@ -1,0 +1,5 @@
+.DS_Store
+convert-folder/*
+original-images/*
+test.http
+myproject
