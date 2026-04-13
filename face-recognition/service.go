@@ -11,15 +11,19 @@ import (
 	"path/filepath"
 )
 
-type SubjectResponse struct {
-	subjects []Subject
+// Define the minimal structs needed to extract Subject information
+type Response struct {
+	Result []Result `json:"result"`
+}
+
+type Result struct {
+	Subjects []Subject `json:"subjects"`
 }
 
 type Subject struct {
 	Subject    string  `json:"subject"`
 	Similarity float64 `json:"similarity"`
 }
-
 
 // Send Request to the exadel service.
 // If return Ok, store metadata to database as Person
@@ -82,26 +86,37 @@ func GetFaceFromImage(path string) *Person {
 	}
 	defer resp.Body.Close()
 
-	// Check the response status code
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("Unexpected status code: %d", resp.StatusCode)
+	var response Response
+	// Read the response body into a string for logging
+	responseBodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Error reading response: %v", err)
 		return nil
 	}
+	defer resp.Body.Close()
+	resp.Body = io.NopCloser(bytes.NewBuffer(responseBodyBytes))
 
-	// Decode the JSON response into a Subject struct
-	var subject Subject
-	err = json.NewDecoder(resp.Body).Decode(&subject)
+	log.Printf("Response Body: %s", responseBodyBytes)
+
+	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
 		log.Printf("Error decoding response: %v", err)
 		return nil
 	}
 
-	// Map the Subject to a Person
 	person := &Person{
-		Name: subject.Subject,
 		Image: Image{
 			Name: path,
 		},
+	}
+
+	// Print the extracted Subject data
+	for _, result := range response.Result {
+		for _, subject := range result.Subjects {
+			log.Println("Subject:", subject.Subject, "Similarity:", subject.Similarity)
+
+			person.Name = subject.Subject
+		}
 	}
 
 	return person
