@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Define the minimal structs needed to extract Subject information
@@ -67,6 +68,10 @@ func GetFaceFromImage(path string) *Person {
 
 	// Create a new HTTP request to the Exadel service
 	endpoint := os.Getenv("EXADEL_SERVICE_URL")
+	if endpoint == "" {
+		log.Printf("EXADEL_SERVICE_URL is not set")
+		return nil
+	}
 	req, err := http.NewRequest("POST", endpoint, body)
 	if err != nil {
 		log.Printf("Error creating request: %v", err)
@@ -121,3 +126,65 @@ func GetFaceFromImage(path string) *Person {
 
 	return person
 }
+
+// Scan provided folder and record the image person related to the subject
+// From provided folder path, the function will run GetFaceFromImage.
+// If it matches expected person, it will store the file name of image into a file.txt as output.
+func ScanFaceFromFolder(path string, expectPerson string) ([]*Person, error) {
+	var persons []*Person
+
+	// Open the directory.
+	dir, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer dir.Close()
+
+	// Read all files in the directory.
+	entries, err := dir.ReadDir(-1)
+	if err != nil {
+		return nil, err
+	}
+
+	// Open output file once, outside the loop.
+	f, err := os.OpenFile("file.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	for _, entry := range entries {
+		if !entry.Type().IsRegular() {
+			continue
+		}
+		ext := strings.ToUpper(filepath.Ext(entry.Name()))
+		if ext != ".JPG" && ext != ".JPEG" && ext != ".PNG" {
+			continue
+		}
+
+		// Get the full file path.
+		filePath := filepath.Join(path, entry.Name())
+
+		// Get faces from the image.
+		person := GetFaceFromImage(filePath)
+
+		if person != nil {
+
+			// if result person.Name matched the input parameter expectPerson
+			if person.Name != expectPerson {
+				continue
+			}
+
+			persons = append(persons, person)
+
+			_, err = f.WriteString(filePath + "\n")
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return persons, nil
+}
+
+// ... rest of code ...
