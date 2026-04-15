@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 // Define the minimal structs needed to extract Subject information
@@ -127,32 +128,24 @@ func GetFaceFromImage(path string) *Person {
 	return person
 }
 
-// Scan provided folder and record the image person related to the subject
-// From provided folder path, the function will run GetFaceFromImage.
-// If it matches expected person, it will store the file name of image into a file.txt as output.
-func ScanFaceFromFolder(path string, expectPerson string) ([]*Person, error) {
-	var persons []*Person
+type scanResult struct {
+	person   *Person
+	filePath string
+}
 
-	// Open the directory.
+func collectImagePaths(path string) ([]string, error) {
 	dir, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer dir.Close()
 
-	// Read all files in the directory.
 	entries, err := dir.ReadDir(-1)
 	if err != nil {
 		return nil, err
 	}
 
-	// Open output file once, outside the loop.
-	f, err := os.OpenFile("file.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
+	var paths []string
 	for _, entry := range entries {
 		if !entry.Type().IsRegular() {
 			continue
@@ -161,26 +154,64 @@ func ScanFaceFromFolder(path string, expectPerson string) ([]*Person, error) {
 		if ext != ".JPG" && ext != ".JPEG" && ext != ".PNG" {
 			continue
 		}
+		paths = append(paths, filepath.Join(path, entry.Name()))
+	}
+	return paths, nil
+}
 
-		// Get the full file path.
-		filePath := filepath.Join(path, entry.Name())
+func scanWorkers(imagePaths []string, expectPerson string) <-chan scanResult {
+	const workers = 8
+	jobs := make(chan string, len(imagePaths))
+	results := make(chan scanResult, len(imagePaths))
 
-		// Get faces from the image.
-		person := GetFaceFromImage(filePath)
-
-		if person != nil {
-
-			// if result person.Name matched the input parameter expectPerson
-			if person.Name != expectPerson {
-				continue
+	var wg sync.WaitGroup
+	for range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for fp := range jobs {
+				p := GetFaceFromImage(fp)
+				if p != nil && p.Name == expectPerson {
+					results <- scanResult{p, fp}
+				}
 			}
+		}()
+	}
 
-			persons = append(persons, person)
+	for _, fp := range imagePaths {
+		jobs <- fp
+	}
+	close(jobs)
 
-			_, err = f.WriteString(filePath + "\n")
-			if err != nil {
-				return nil, err
-			}
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	return results
+}
+
+// Scan provided folder and record the image person related to the subject
+// From provided folder path, the function will run GetFaceFromImage.
+// If it matches expected person, it will store the file name of image into a file.txt as output.
+func ScanFaceFromFolder(path string, expectPerson string) ([]*Person, error) {
+	imagePaths, err := collectImagePaths(path)
+	if err != nil {
+		return nil, err
+	}
+
+	f, err := os.OpenFile("file.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var persons []*Person
+	for r := range scanWorkers(imagePaths, expectPerson) {
+		persons = append(persons, r.person)
+		_, err = f.WriteString(r.filePath + "\n")
+		if err != nil {
+			return nil, err
 		}
 	}
 
