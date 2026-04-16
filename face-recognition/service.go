@@ -160,7 +160,7 @@ func collectImagePaths(path string) ([]string, error) {
 }
 
 func scanWorkers(imagePaths []string, expectPerson string) <-chan scanResult {
-	const workers = 8
+	const workers = 2
 	jobs := make(chan string, len(imagePaths))
 	results := make(chan scanResult, len(imagePaths))
 

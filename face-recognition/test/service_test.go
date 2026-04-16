@@ -78,5 +78,5 @@ func TestScanFaceFromFolder(t *testing.T) {
 	assert.NotNil(t, persons)
 
 	fmt.Printf("ScanFaceFromFolder took %v\n", timeTaken)
-	fmt.Printf("Memory used: %d bytes\n", memAfter.Alloc-memBefore.Alloc)
+	fmt.Printf("Memory used: %.2f MB\n", float64(memAfter.Alloc-memBefore.Alloc)/(1024*1024))
 }
