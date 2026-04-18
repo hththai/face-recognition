@@ -3,6 +3,8 @@
 package test
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"net/http"
 	"os"
@@ -12,6 +14,7 @@ import (
 
 	srv "myproject/face-recognition"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 )
@@ -52,7 +55,7 @@ func TestGetFaceFromImageIntegration(t *testing.T) {
 
 	// Assert the results
 	assert.NotNil(t, person, "Expected a non-nil Person object")
-	assert.Equal(t, "phoebe", person.Name, "Expected name 'Phoebe'")
+	assert.Equal(t, "phoebe", person.Name, "Expected name 'phoebe'")
 	assert.Equal(t, testImagePath, person.Image.Name, "Expected image path to match")
 }
 
@@ -79,4 +82,59 @@ func TestScanFaceFromFolder(t *testing.T) {
 
 	fmt.Printf("ScanFaceFromFolder took %v\n", timeTaken)
 	fmt.Printf("Memory used: %.2f MB\n", float64(memAfter.Alloc-memBefore.Alloc)/(1024*1024))
+}
+
+func TestGetFaceSubjects(t *testing.T) {
+	err := godotenv.Load("../../.env")
+	if err != nil {
+		t.Fatalf("Error loading .env file: %v", err)
+	}
+
+	result, err := srv.GetFaceSubjects()
+
+	if err != nil {
+		t.Fatalf("failed to get subjects: %v", err)
+	}
+
+	fmt.Printf("result is::: %s\n", result)
+
+	// Convert result from &[]string to []string
+	inputSubList := result.PersonName
+
+	fmt.Printf("converted to list string: %v\n", inputSubList)
+
+	// DB connection established
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repoSvc := srv.NewFaceRepo(db)
+
+	affected, err := repoSvc.InsertFaceSubject(context.Background(), inputSubList)
+
+	if err != nil {
+		t.Fatalf("failed to insert subject name: %v", err)
+	}
+
+	fmt.Printf("Inserted %d rows\n", affected)
+
+}
+
+func setupTestDB(t *testing.T) *sql.DB {
+	t.Helper()
+
+	connStr := os.Getenv("TEST_DB_DSN")
+	if connStr == "" {
+		connStr = "testuser:password@tcp(127.0.0.1:3306)/testdb?parseTime=true"
+	}
+
+	db, err := sql.Open("mysql", connStr)
+	if err != nil {
+		t.Fatalf("failed to connect to DB: %v", err)
+	}
+
+	if err := db.Ping(); err != nil {
+		t.Fatalf("failed to ping DB: %v", err)
+	}
+
+	return db
 }

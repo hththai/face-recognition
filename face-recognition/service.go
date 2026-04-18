@@ -191,6 +191,46 @@ func scanWorkers(imagePaths []string, expectPerson string) <-chan scanResult {
 	return results
 }
 
+type SubjectResponse struct {
+	PersonName []string `json:"subjects"`
+}
+
+// List subjects and store persons as list to run compare.
+func GetFaceSubjects() (*SubjectResponse, error) {
+	// Create a new HTTP request to the Exadel service
+	endpoint := os.Getenv("EXADEL_ENDPOINT")
+	if endpoint == "" {
+		log.Printf("EXADEL_ENDPOINT is not set")
+		return nil, nil
+	}
+
+	req, err := http.NewRequest("GET", endpoint+"/recognition/subjects", nil)
+	if err != nil {
+		log.Printf("Error creating request: %v", err)
+		return nil, err
+	}
+
+	// Add necessary headers
+	req.Header.Add("x-api-key", os.Getenv("EXADEL_API_KEY"))
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error sending request: %v", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var response SubjectResponse
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		log.Printf("Error decoding response: %v", err)
+		return nil, err
+	}
+
+	return &response, nil
+}
+
 // Scan provided folder and record the image person related to the subject
 // From provided folder path, the function will run GetFaceFromImage.
 // If it matches expected person, it will store the file name of image into a file.txt as output.
@@ -200,6 +240,7 @@ func ScanFaceFromFolder(path string, expectPerson string) ([]*Person, error) {
 		return nil, err
 	}
 
+	// Temporary write to file. It will write to database
 	f, err := os.OpenFile("file.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, err
