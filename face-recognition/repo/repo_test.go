@@ -21,12 +21,16 @@ func TestConnection(t *testing.T) {
 	defer cancelfunc()
 
 	// Drop table
-	_, err := db.ExecContext(ctx, "DROP TABLE IF EXISTS `face_subject`")
+
+	dropTableQuery := `DROP TABLE IF EXISTS face_subject_image, face_subject, face_image_path; `
+
+	_, err := db.ExecContext(ctx, dropTableQuery)
+
 	if err != nil {
-		t.Fatalf("Failed to drop table: %v", err)
+		t.Fatalf("failed to drop table: %v", err)
 	}
 
-	// Create table
+	// Create table subject person
 	tableCreationQuery := "CREATE TABLE IF NOT EXISTS `face_subject` (`id` INT AUTO_INCREMENT PRIMARY KEY, `name` VARCHAR(128) NOT NULL UNIQUE)"
 
 	_, err = db.ExecContext(ctx, tableCreationQuery)
@@ -35,6 +39,32 @@ func TestConnection(t *testing.T) {
 		t.Fatalf("failed to create table: %v", err)
 	}
 
+	// Create table file image path
+	tblFileQuery := "CREATE TABLE IF NOT EXISTS `face_image_path` (`id` INT PRIMARY KEY AUTO_INCREMENT NOT NULL, `file_path` VARCHAR(255) NOT NULL, `file_name` VARCHAR(128) NOT NULL)"
+
+	_, err = db.ExecContext(ctx, tblFileQuery)
+
+	if err != nil {
+		t.Fatalf("faied to create table: %v", err)
+	}
+
+	// Create table many to many subjects and faces
+	tblFileToImageQuery := `
+		CREATE TABLE IF NOT EXISTS face_subject_image (
+			subject_id INT NOT NULL,
+			file_id INT NOT NULL,
+			PRIMARY KEY (subject_id, file_id),
+			FOREIGN KEY (subject_id) REFERENCES face_subject (id) ON DELETE CASCADE,
+			FOREIGN KEY (file_id) REFERENCES face_image_path (id) ON DELETE CASCADE
+		)`
+
+	_, err = db.ExecContext(ctx, tblFileToImageQuery)
+
+	if err != nil {
+		t.Fatalf("faied to create table: %v", err)
+	}
+
+	//
 	// Insert Subject data
 	//insertSubjectQuery := "INSERT INTO `face_subject` (name) VALUES ('phoebe'),('john'),('vickie')"
 

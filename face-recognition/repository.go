@@ -4,11 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"path/filepath"
 	"strings"
 )
 
 type FaceRepository interface {
 	InsertFaceSubject(ctx context.Context, subList []string) (int64, error)
+	InsertFilePath(ctx context.Context, images []ImageFile) error
 }
 
 type faceRepoImpl struct {
@@ -62,7 +64,35 @@ func (r *faceRepoImpl) InsertFaceSubject(ctx context.Context, subList []string) 
 	return affected, nil
 }
 
-// Insert file path into the database.
-func InsertFilePath(ctx context.Context, db *sql.DB, filePaths []string) error {
+// Insert file path into the database - face_image_path (file_path, file_name)
+// Can have many folders, sub folders, and files - 2000 files
+// TODO: handle the same file name
+func (r *faceRepoImpl) InsertFilePath(ctx context.Context, images []ImageFile) error {
+	if len(images) == 0 {
+		return fmt.Errorf("no input file")
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	for _, image := range images {
+		fileName := filepath.Base(image.Path)
+		_, err := tx.ExecContext(ctx, "INSERT INTO face_image_path (file_path, file_name) VALUES (?, ?)", image.Path, fileName)
+
+		if err != nil {
+			tx.Rollback()
+			return fmt.Errorf("failed to insert file path: %w", err)
+		}
+	}
+
+	err = tx.Commit()
+
+	if err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
 	return nil
 }

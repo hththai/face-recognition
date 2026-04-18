@@ -13,20 +13,6 @@ import (
 	"sync"
 )
 
-// Define the minimal structs needed to extract Subject information
-type Response struct {
-	Result []Result `json:"result"`
-}
-
-type Result struct {
-	Subjects []Subject `json:"subjects"`
-}
-
-type Subject struct {
-	Subject    string  `json:"subject"`
-	Similarity float64 `json:"similarity"`
-}
-
 // Send Request to the exadel service.
 // If return Ok, store metadata to database as Person
 // schema of return is Subject.
@@ -128,11 +114,6 @@ func GetFaceFromImage(path string) *Person {
 	return person
 }
 
-type scanResult struct {
-	person   *Person
-	filePath string
-}
-
 func collectImagePaths(path string) ([]string, error) {
 	dir, err := os.Open(path)
 	if err != nil {
@@ -189,10 +170,6 @@ func scanWorkers(imagePaths []string, expectPerson string) <-chan scanResult {
 	}()
 
 	return results
-}
-
-type SubjectResponse struct {
-	PersonName []string `json:"subjects"`
 }
 
 // List subjects and store persons as list to run compare.

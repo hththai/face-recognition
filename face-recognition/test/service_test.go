@@ -119,6 +119,39 @@ func TestGetFaceSubjects(t *testing.T) {
 
 }
 
+func TestInsertFilePath(t *testing.T) {
+	err := godotenv.Load("../../.env")
+	if err != nil {
+		t.Fatalf("Error loading .env file: %v", err)
+	}
+
+	// DB connection established
+	db := setupTestDB(t)
+	defer db.Close()
+
+	// Define example []ImageFile
+	imageFiles := []srv.ImageFile{
+		{
+			Path: "/Volumes/Latte/PIC/2026/home/bris/0-face-recognition/convert-folder/DSCF2998.JPG",
+		},
+		{
+			Path: "/Volumes/Latte/PIC/2026/home/bris/0-face-recognition/convert-folder/DSCF2713.JPG",
+		},
+		{
+			Path: "/Volumes/Latte/PIC/2026/home/bris/0-face-recognition/convert-folder/DSCF2714.JPG",
+		},
+	}
+
+	repo := srv.NewFaceRepo(db)
+	err = repo.InsertFilePath(context.Background(), imageFiles)
+
+	if err != nil {
+		t.Fatalf("failed to insert File Path: %v", err)
+	}
+
+	fmt.Printf("insert success")
+}
+
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 
