@@ -255,16 +255,16 @@ func ConvertStringSliceToImagePathSlice(strSlice []string) []ImageFile {
 
 // Import files location to database.
 // using collect image paths function.
-func StoreFilePaths(ctx context.Context, filePath []ImageFile, repo FaceRepository) error {
+func StoreFilePaths(ctx context.Context, filePath []ImageFile, repo FaceRepository) (int64, error) {
 	if len(filePath) == 0 {
-		return fmt.Errorf("invalid path input")
+		return 0, fmt.Errorf("invalid path input")
 	}
 
-	err := repo.InsertFilePath(ctx, filePath)
+	affected, err := repo.InsertFilePath(ctx, filePath)
 
 	if err != nil {
-		return fmt.Errorf("failed to store file path %v", err)
+		return 0, fmt.Errorf("failed to store file path %v", err)
 	}
 
-	return nil
+	return affected, nil
 }

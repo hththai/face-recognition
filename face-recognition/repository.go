@@ -10,7 +10,7 @@ import (
 
 type FaceRepository interface {
 	InsertFaceSubject(ctx context.Context, subList []string) (int64, error)
-	InsertFilePath(ctx context.Context, images []ImageFile) error
+	InsertFilePath(ctx context.Context, images []ImageFile) (int64, error)
 }
 
 type faceRepoImpl struct {
@@ -66,15 +66,15 @@ func (r *faceRepoImpl) InsertFaceSubject(ctx context.Context, subList []string) 
 
 // Insert file path into the database - face_image_path (file_path, file_name)
 // Can have many folders, sub folders, and files - 2000 files
-func (r *faceRepoImpl) InsertFilePath(ctx context.Context, images []ImageFile) error {
+func (r *faceRepoImpl) InsertFilePath(ctx context.Context, images []ImageFile) (int64, error) {
 	if len(images) == 0 {
-		return fmt.Errorf("empty images")
+		return 0, fmt.Errorf("empty images")
 	}
 
 	tx, err := r.db.BeginTx(ctx, nil)
 
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	var args []interface{}
@@ -86,17 +86,19 @@ func (r *faceRepoImpl) InsertFilePath(ctx context.Context, images []ImageFile) e
 		valueStrings = append(valueStrings, "(?, ?)")
 	}
 
-	query := fmt.Sprintf("INSERT INTO face_image_path (file_path, file_name) VALUES %s", strings.Join(valueStrings, ", "))
+	query := fmt.Sprintf("INSERT IGNORE INTO face_image_path (file_path, file_name) VALUES %s", strings.Join(valueStrings, ", "))
 
-	_, err = tx.ExecContext(ctx, query, args...)
+	res, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		tx.Rollback()
-		return fmt.Errorf("failed to insert file paths: %w", err)
+		return 0, fmt.Errorf("failed to insert file paths: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return err
+		return 0, err
 	}
 
-	return nil
+	affected, _ := res.RowsAffected()
+
+	return affected, nil
 }

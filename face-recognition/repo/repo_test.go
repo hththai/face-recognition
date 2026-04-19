@@ -40,7 +40,7 @@ func TestConnection(t *testing.T) {
 	}
 
 	// Create table file image path
-	tblFileQuery := "CREATE TABLE IF NOT EXISTS `face_image_path` (`id` INT PRIMARY KEY AUTO_INCREMENT NOT NULL, `file_path` VARCHAR(255) NOT NULL, `file_name` VARCHAR(128) NOT NULL)"
+	tblFileQuery := "CREATE TABLE IF NOT EXISTS `face_image_path` (`id` INT PRIMARY KEY AUTO_INCREMENT NOT NULL, `file_path` VARCHAR(255) NOT NULL, `file_name` VARCHAR(128) NOT NULL UNIQUE)"
 
 	_, err = db.ExecContext(ctx, tblFileQuery)
 
@@ -66,7 +66,7 @@ func TestConnection(t *testing.T) {
 
 	//
 	// Insert Subject data
-	//insertSubjectQuery := "INSERT INTO `face_subject` (name) VALUES ('phoebe'),('john'),('vickie')"
+	// insertSubjectQuery := "INSERT INTO `face_subject` (name) VALUES ('phoebe'),('john'),('vickie')"
 
 	// _, err = db.ExecContext(ctx, insertSubjectQuery)
 	// if err != nil {

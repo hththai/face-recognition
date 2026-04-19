@@ -84,6 +84,7 @@ func TestScanFaceFromFolder(t *testing.T) {
 	fmt.Printf("Memory used: %.2f MB\n", float64(memAfter.Alloc-memBefore.Alloc)/(1024*1024))
 }
 
+// Test GetFaceSubjects save to database
 func TestGetFaceSubjects(t *testing.T) {
 	err := godotenv.Load("../../.env")
 	if err != nil {
@@ -143,13 +144,13 @@ func TestInsertFilePath(t *testing.T) {
 	}
 
 	repo := srv.NewFaceRepo(db)
-	err = repo.InsertFilePath(context.Background(), imageFiles)
+	affected, err := repo.InsertFilePath(context.Background(), imageFiles)
 
 	if err != nil {
 		t.Fatalf("failed to insert File Path: %v", err)
 	}
 
-	fmt.Printf("insert success")
+	fmt.Printf("insert success %d", affected)
 }
 
 // Test function StoreFilePaths(ctx context.Context, filePath []ImageFile, repo FaceRepository) error
@@ -175,13 +176,13 @@ func TestInsertFilePathByService(t *testing.T) {
 
 	repo := srv.NewFaceRepo(db)
 
-	err = srv.StoreFilePaths(context.Background(), imageFiles, repo)
+	affected, err := srv.StoreFilePaths(context.Background(), imageFiles, repo)
 
 	if err != nil {
 		t.Fatalf("failed to insert File Path: %v", err)
 	}
 
-	fmt.Printf("insert success")
+	fmt.Printf("insert success %d\n", affected)
 }
 
 func setupTestDB(t *testing.T) *sql.DB {
