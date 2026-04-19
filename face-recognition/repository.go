@@ -94,5 +94,9 @@ func (r *faceRepoImpl) InsertFilePath(ctx context.Context, images []ImageFile) e
 		return fmt.Errorf("failed to insert file paths: %w", err)
 	}
 
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
 	return nil
 }

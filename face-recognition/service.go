@@ -2,7 +2,9 @@ package facerecognition
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"mime/multipart"
@@ -237,3 +239,32 @@ func ScanFaceFromFolder(path string, expectPerson string) ([]*Person, error) {
 }
 
 // ... rest of code ...
+
+// Dummy for test case
+func GetCollectImage(path string) ([]string, error) {
+	return collectImagePaths(path)
+}
+
+func ConvertStringSliceToImagePathSlice(strSlice []string) []ImageFile {
+	var imagePathSlice []ImageFile
+	for _, str := range strSlice {
+		imagePathSlice = append(imagePathSlice, ImageFile{str})
+	}
+	return imagePathSlice
+}
+
+// Import files location to database.
+// using collect image paths function.
+func StoreFilePaths(ctx context.Context, filePath []ImageFile, repo FaceRepository) error {
+	if len(filePath) == 0 {
+		return fmt.Errorf("invalid path input")
+	}
+
+	err := repo.InsertFilePath(ctx, filePath)
+
+	if err != nil {
+		return fmt.Errorf("failed to store file path %v", err)
+	}
+
+	return nil
+}
