@@ -185,6 +185,32 @@ func TestInsertFilePathByService(t *testing.T) {
 	fmt.Printf("insert success %d\n", affected)
 }
 
+// Test insert face and image
+func TestInsertFaceAndImage(t *testing.T) {
+	err := godotenv.Load("../../.env")
+	if err != nil {
+		t.Fatalf("Error loading .env file: %v", err)
+	}
+
+	// DB connection established
+	db := setupTestDB(t)
+	defer db.Close()
+
+	subject := srv.Subject{Subject: "phoebe"}
+	img := "DSCF2778.JPG"
+
+	repo := srv.NewFaceRepo(db)
+
+	affected, err := repo.InsertFaceAndImage(context.Background(), subject, img)
+
+	if err != nil {
+		t.Fatalf("failed to insert %v", err)
+	}
+
+	fmt.Printf("insert success %d\n", affected)
+
+}
+
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 

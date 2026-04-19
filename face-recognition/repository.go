@@ -11,6 +11,7 @@ import (
 type FaceRepository interface {
 	InsertFaceSubject(ctx context.Context, subList []string) (int64, error)
 	InsertFilePath(ctx context.Context, images []ImageFile) (int64, error)
+	InsertFaceAndImage(ctx context.Context, subject Subject, images string) (int64, error)
 }
 
 type faceRepoImpl struct {
@@ -104,7 +105,29 @@ func (r *faceRepoImpl) InsertFilePath(ctx context.Context, images []ImageFile) (
 }
 
 // Insert into file_subject_image
-func (r *faceRepoImpl) InsertFaceAndImage(ctx context.Context, subjectID int64, images []ImageFile) (int64, error) {
+func (r *faceRepoImpl) InsertFaceAndImage(ctx context.Context, subject Subject, images string) (int64, error) {
 
-	return 0, nil
+	tx, err := r.db.BeginTx(ctx, nil)
+
+	if err != nil {
+		return 0, err
+	}
+
+	query := `
+	INSERT INTO face_subject_image (subject, file) VALUES (?,?)`
+
+	res, err := tx.ExecContext(ctx, query, subject.Subject, images)
+
+	if err != nil {
+		tx.Rollback()
+		return 0, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+
+	affected, _ := res.RowsAffected()
+
+	return affected, nil
 }
