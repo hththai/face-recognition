@@ -102,3 +102,9 @@ func (r *faceRepoImpl) InsertFilePath(ctx context.Context, images []ImageFile) (
 
 	return affected, nil
 }
+
+// Insert into file_subject_image
+func (r *faceRepoImpl) InsertFaceAndImage(ctx context.Context, subjectID int64, images []ImageFile) (int64, error) {
+
+	return 0, nil
+}

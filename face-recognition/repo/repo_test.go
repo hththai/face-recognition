@@ -50,13 +50,13 @@ func TestConnection(t *testing.T) {
 
 	// Create table many to many subjects and faces
 	tblFileToImageQuery := `
-		CREATE TABLE IF NOT EXISTS face_subject_image (
-			subject_id INT NOT NULL,
-			file_id INT NOT NULL,
-			PRIMARY KEY (subject_id, file_id),
-			FOREIGN KEY (subject_id) REFERENCES face_subject (id) ON DELETE CASCADE,
-			FOREIGN KEY (file_id) REFERENCES face_image_path (id) ON DELETE CASCADE
-		)`
+		CREATE TABLE face_subject_image (
+				subject VARCHAR(128) NOT NULL,
+				file VARCHAR(128) NOT NULL,
+				primary key (subject, file),
+				foreign key (subject) references face_subject(name) on delete cascade,
+				foreign key (file) references face_image_path(file_name) on delete cascade
+  			)`
 
 	_, err = db.ExecContext(ctx, tblFileToImageQuery)
 
