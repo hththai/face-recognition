@@ -40,7 +40,12 @@ func TestConnection(t *testing.T) {
 	}
 
 	// Create table file image path
-	tblFileQuery := "CREATE TABLE IF NOT EXISTS `face_image_path` (`id` INT PRIMARY KEY AUTO_INCREMENT NOT NULL, `file_path` VARCHAR(255) NOT NULL, `file_name` VARCHAR(128) NOT NULL UNIQUE)"
+	tblFileQuery := `CREATE TABLE IF NOT EXISTS face_image_path (
+	id INT PRIMARY KEY AUTO_INCREMENT NOT NULL, 
+	file_path VARCHAR(255) NOT NULL, 
+	file_name VARCHAR(128) NOT NULL UNIQUE,
+	status ENUM('pending','processing', 'error') DEFAULT 'pending'
+	)`
 
 	_, err = db.ExecContext(ctx, tblFileQuery)
 
