@@ -44,7 +44,9 @@ func TestConnection(t *testing.T) {
 	id INT PRIMARY KEY AUTO_INCREMENT NOT NULL, 
 	file_path VARCHAR(255) NOT NULL, 
 	file_name VARCHAR(128) NOT NULL UNIQUE,
-	status ENUM('pending','processing', 'error') DEFAULT 'pending'
+	status ENUM('pending','processing', 'error', 'completed') DEFAULT 'pending',
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 	)`
 
 	_, err = db.ExecContext(ctx, tblFileQuery)

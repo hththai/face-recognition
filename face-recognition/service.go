@@ -268,3 +268,21 @@ func StoreFilePaths(ctx context.Context, filePath []ImageFile, repo FaceReposito
 
 	return affected, nil
 }
+
+// Call API and get Face from image
+func GetFaces(ctx context.Context, repo FaceRepository) string {
+
+	// path, err := repo.GetFirstImage(ctx)
+
+	// if err != nil {
+	// 	return ""
+	// }
+
+	// // Call API
+	// person := GetFaceFromImage(path)
+
+	// fmt.Println("person is::: ", person)
+
+	// return path
+	return ""
+}

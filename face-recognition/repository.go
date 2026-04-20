@@ -12,6 +12,7 @@ type FaceRepository interface {
 	InsertFaceSubject(ctx context.Context, subList []string) (int64, error)
 	InsertFilePath(ctx context.Context, images []ImageFile) (int64, error)
 	InsertFaceAndImage(ctx context.Context, subject Subject, images string) (int64, error)
+	GetFirstImage(ctx context.Context) ([]string, error)
 }
 
 type faceRepoImpl struct {
@@ -130,4 +131,33 @@ func (r *faceRepoImpl) InsertFaceAndImage(ctx context.Context, subject Subject, 
 	affected, _ := res.RowsAffected()
 
 	return affected, nil
+}
+
+// Test Get dummy first value
+// Test Get dummy first value
+func (r *faceRepoImpl) GetFirstImage(ctx context.Context) ([]string, error) {
+	var filepaths []string
+
+	query := `SELECT file_path FROM face_image_path WHERE status="pending" LIMIT 5`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return []string{}, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var filepath string
+		err := rows.Scan(&filepath)
+		if err != nil {
+			return []string{}, err
+		}
+		filepaths = append(filepaths, filepath)
+	}
+
+	if err := rows.Err(); err != nil {
+		return []string{}, err
+	}
+
+	return filepaths, nil
 }

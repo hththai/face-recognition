@@ -165,7 +165,7 @@ func TestInsertFilePathByService(t *testing.T) {
 	defer db.Close()
 
 	// Call direct service function
-	path := "/Volumes/Latte/PIC/2026/home/bris/0-face-recognition/convert-folder"
+	path := "/Volumes/Latte/PIC/2026/home/bris/0-face-recognition/convert-folder/"
 	imagePaths, err := srv.GetCollectImage(path)
 	if err != nil {
 		t.Fatalf("failed to get path collection: %v", err)
@@ -208,6 +208,45 @@ func TestInsertFaceAndImage(t *testing.T) {
 	}
 
 	fmt.Printf("insert success %d\n", affected)
+
+}
+
+// Test get dummy 1 path
+func TestGetFirstImagePath(t *testing.T) {
+	err := godotenv.Load("../../.env")
+	if err != nil {
+		t.Fatalf("Error loading .env file: %v", err)
+	}
+
+	// DB connection established
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := srv.NewFaceRepo(db)
+
+	filePath, err := repo.GetFirstImage(context.Background())
+
+	if err != nil {
+		t.Fatalf("failed to get first path: %v", err)
+	}
+
+	fmt.Println("Value path is >>> ", filePath)
+}
+
+func TestGetPathService(t *testing.T) {
+
+	err := godotenv.Load("../../.env")
+	if err != nil {
+		t.Fatalf("Error loading .env file: %v", err)
+	}
+
+	// DB connection established
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := srv.NewFaceRepo(db)
+
+	path := srv.GetFaces(context.Background(), repo)
+	fmt.Println("Result is >>> ", path)
 
 }
 
