@@ -3,7 +3,6 @@ package facerecognition
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -13,7 +12,7 @@ type FaceRepository interface {
 	InsertFaceSubject(ctx context.Context, subList []string) (int64, error)
 	InsertFilePath(ctx context.Context, images []ImageFile) (int64, error)
 	InsertFaceAndImage(ctx context.Context, subject Subject, images string) (int64, error)
-	GetFirstImage(ctx context.Context) ([]ImageFile, error)
+	GetFirstImage(ctx context.Context, limit int) ([]ImageFile, error)
 }
 
 type faceRepoImpl struct {
@@ -136,43 +135,59 @@ func (r *faceRepoImpl) InsertFaceAndImage(ctx context.Context, subject Subject, 
 
 // Test Get dummy first value
 // Get and Update status of x image to "processing".
-func (r *faceRepoImpl) GetFirstImage(ctx context.Context) ([]ImageFile, error) {
+func (r *faceRepoImpl) GetFirstImage(ctx context.Context, limit int) ([]ImageFile, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var rec ImageFile
+	var images []ImageFile
 
 	query := `
 			SELECT file_path, file_name
 			FROM face_image_path 
 			WHERE status="pending" 
-			LIMIT 1 
+			LIMIT ?
 			FOR UPDATE SKIP LOCKED`
 
-	row := tx.QueryRowContext(ctx, query)
+	rows, err := tx.QueryContext(ctx, query, limit)
 
-	if err := row.Scan(&rec.Path, &rec.Name); err != nil {
+	if err != nil {
 		tx.Rollback()
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, sql.ErrNoRows
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var rec ImageFile
+
+		if err := rows.Scan(&rec.Path, &rec.Name); err != nil {
+			rows.Close()
+			tx.Rollback()
+			return nil, err
 		}
+		images = append(images, rec)
+	}
+
+	if err := rows.Err(); err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
 	// Mark as processing
 	updateQuery := `UPDATE face_image_path SET status='processing' WHERE file_name=?`
-	_, err = tx.ExecContext(ctx, updateQuery, &rec.Name)
-
-	if err != nil {
-		tx.Rollback()
-		return nil, err
+	for _, image := range images {
+		_, err = tx.ExecContext(ctx, updateQuery, image.Name)
+		if err != nil {
+			tx.Rollback()
+			return nil, err
+		}
 	}
 
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 
-	return []ImageFile{rec}, nil
+	return images, nil
 }

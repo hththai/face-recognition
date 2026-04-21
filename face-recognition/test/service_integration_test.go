@@ -224,12 +224,21 @@ func TestGetFirstImagePath(t *testing.T) {
 
 	repo := srv.NewFaceRepo(db)
 
-	filePath, err := repo.GetFirstImage(context.Background())
+	var memBefore, memAfter runtime.MemStats
+	runtime.ReadMemStats(&memBefore)
+	startTime := time.Now()
+
+	filePath, err := repo.GetFirstImage(context.Background(), 50)
+
+	timeTaken := time.Since(startTime)
+	runtime.ReadMemStats(&memAfter)
 
 	if err != nil {
 		t.Fatalf("failed to get first path: %v", err)
 	}
 
+	fmt.Printf("GetFirstImagePath took %v\n", timeTaken)
+	fmt.Printf("Memory used: %.2f MB\n", float64(memAfter.Alloc-memBefore.Alloc)/(1024*1024))
 	fmt.Println("Value path is >>> ", filePath)
 }
 
