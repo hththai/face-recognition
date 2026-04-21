@@ -274,19 +274,22 @@ func StoreFilePaths(ctx context.Context, filePath []ImageFile, repo FaceReposito
 }
 
 // Call API and get Face from image
-func GetFaces(ctx context.Context, repo FaceRepository) string {
+// Repo function name GetImagesAndProcess return []ImageFile{Name, Path}
+// This service do is from each Path, it will send request by GetFaceFromImage(path string) and return *Person.
+// Each ImageFile in []ImageFile will send request and return the result.
+// Return all result as json response, or object response.
+func GetFaces(ctx context.Context, repo FaceRepository, limit int) ([]*Person, error) {
+	imageRecords, err := repo.GetImagesAndProcess(ctx, limit) // set limit 50
+	if err != nil {
+		return nil, err
+	}
 
-	// imageRecords, err := repo.GetFirstImage(ctx)
+	var people []*Person
+	for _, imageRecord := range imageRecords {
+		person := GetFaceFromImage(imageRecord.Path)
+		fmt.Println("person is::: ", person)
+		people = append(people, person)
+	}
 
-	// if err != nil {
-	// 	return ""
-	// }
-
-	// // Call API
-	// person := GetFaceFromImage(imageRecords[0].Path)
-
-	// fmt.Println("person is::: ", person)
-
-	// return imageRecords[0].Path
-	return ""
+	return people, nil
 }

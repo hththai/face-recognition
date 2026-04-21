@@ -5,6 +5,7 @@ package test
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -212,7 +213,7 @@ func TestInsertFaceAndImage(t *testing.T) {
 }
 
 // Test get dummy 1 path
-func TestGetFirstImagePath(t *testing.T) {
+func TestGetImagesAndProcess(t *testing.T) {
 	err := godotenv.Load("../../.env")
 	if err != nil {
 		t.Fatalf("Error loading .env file: %v", err)
@@ -228,7 +229,7 @@ func TestGetFirstImagePath(t *testing.T) {
 	runtime.ReadMemStats(&memBefore)
 	startTime := time.Now()
 
-	filePath, err := repo.GetFirstImage(context.Background(), 50)
+	filePath, err := repo.GetImagesAndProcess(context.Background(), 50)
 
 	timeTaken := time.Since(startTime)
 	runtime.ReadMemStats(&memAfter)
@@ -242,7 +243,8 @@ func TestGetFirstImagePath(t *testing.T) {
 	fmt.Println("Value path is >>> ", filePath)
 }
 
-func TestGetPathService(t *testing.T) {
+// Test Get Faces from a list of []ImagePath repo
+func TestGetFacesService(t *testing.T) {
 
 	err := godotenv.Load("../../.env")
 	if err != nil {
@@ -254,8 +256,26 @@ func TestGetPathService(t *testing.T) {
 	defer db.Close()
 	repo := srv.NewFaceRepo(db)
 
-	path := srv.GetFaces(context.Background(), repo)
-	fmt.Println("Result is >>> ", path)
+	var memBefore, memAfter runtime.MemStats
+	runtime.ReadMemStats(&memBefore)
+	startTime := time.Now()
+
+	persons, err := srv.GetFaces(context.Background(), repo, 50)
+	if err != nil {
+		t.Fatalf("failed to get faces: %v", err)
+	}
+
+	jsonResult, err := json.MarshalIndent(persons, "", "    ")
+	if err != nil {
+		t.Fatalf("failed to marshal result to JSON: %v", err)
+	}
+	fmt.Printf("GetFacesService result:\n%s\n", jsonResult)
+
+	timeTaken := time.Since(startTime)
+	runtime.ReadMemStats(&memAfter)
+
+	fmt.Printf("\u001B[32mGetPathService took %v\n\u001B[0m", timeTaken)
+	fmt.Printf("\u001B[32mMemory used: %.2f MB\n\u001B[0m", float64(memAfter.Alloc-memBefore.Alloc)/(1024*1024))
 
 }
 

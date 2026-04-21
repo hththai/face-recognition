@@ -12,7 +12,7 @@ type FaceRepository interface {
 	InsertFaceSubject(ctx context.Context, subList []string) (int64, error)
 	InsertFilePath(ctx context.Context, images []ImageFile) (int64, error)
 	InsertFaceAndImage(ctx context.Context, subject Subject, images string) (int64, error)
-	GetFirstImage(ctx context.Context, limit int) ([]ImageFile, error)
+	GetImagesAndProcess(ctx context.Context, limit int) ([]ImageFile, error)
 }
 
 type faceRepoImpl struct {
@@ -135,7 +135,7 @@ func (r *faceRepoImpl) InsertFaceAndImage(ctx context.Context, subject Subject, 
 
 // Test Get dummy first value
 // Get and Update status of x image to "processing".
-func (r *faceRepoImpl) GetFirstImage(ctx context.Context, limit int) ([]ImageFile, error) {
+func (r *faceRepoImpl) GetImagesAndProcess(ctx context.Context, limit int) ([]ImageFile, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
