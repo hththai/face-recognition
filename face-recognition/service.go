@@ -248,7 +248,11 @@ func GetCollectImage(path string) ([]string, error) {
 func ConvertStringSliceToImagePathSlice(strSlice []string) []ImageFile {
 	var imagePathSlice []ImageFile
 	for _, str := range strSlice {
-		imagePathSlice = append(imagePathSlice, ImageFile{str})
+
+		// get name of file
+		name := filepath.Base(str)
+
+		imagePathSlice = append(imagePathSlice, ImageFile{name, str})
 	}
 	return imagePathSlice
 }
@@ -272,17 +276,17 @@ func StoreFilePaths(ctx context.Context, filePath []ImageFile, repo FaceReposito
 // Call API and get Face from image
 func GetFaces(ctx context.Context, repo FaceRepository) string {
 
-	// path, err := repo.GetFirstImage(ctx)
+	imageRecords, err := repo.GetFirstImage(ctx)
 
-	// if err != nil {
-	// 	return ""
-	// }
+	if err != nil {
+		return ""
+	}
 
-	// // Call API
-	// person := GetFaceFromImage(path)
+	// Call API
+	person := GetFaceFromImage(imageRecords[0].Path)
 
-	// fmt.Println("person is::: ", person)
+	fmt.Println("person is::: ", person)
 
-	// return path
-	return ""
+	return imageRecords[0].Path
+	// return ""
 }

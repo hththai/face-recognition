@@ -1,6 +1,7 @@
 package test
 
 import (
+	"encoding/json"
 	"fmt"
 	srv "myproject/face-recognition"
 	"testing"
@@ -19,5 +20,13 @@ func TestConvertStringSliceToImagePathSlice(t *testing.T) {
 	// convert []string to []ImagePath
 	converted := srv.ConvertStringSliceToImagePathSlice(result)
 
-	fmt.Println("converted result::: ", converted)
+	// fmt.Println("converted result::: ", converted)
+	prettyJSON, err := json.MarshalIndent(converted, "", " ")
+	if err != nil {
+		fmt.Println("Error marshaling to JSON:", err)
+		return
+	}
+
+	fmt.Println(string(prettyJSON))
+
 }

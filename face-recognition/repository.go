@@ -3,6 +3,7 @@ package facerecognition
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -12,7 +13,7 @@ type FaceRepository interface {
 	InsertFaceSubject(ctx context.Context, subList []string) (int64, error)
 	InsertFilePath(ctx context.Context, images []ImageFile) (int64, error)
 	InsertFaceAndImage(ctx context.Context, subject Subject, images string) (int64, error)
-	GetFirstImage(ctx context.Context) ([]string, error)
+	GetFirstImage(ctx context.Context) ([]ImageFile, error)
 }
 
 type faceRepoImpl struct {
@@ -134,30 +135,44 @@ func (r *faceRepoImpl) InsertFaceAndImage(ctx context.Context, subject Subject, 
 }
 
 // Test Get dummy first value
-// Test Get dummy first value
-func (r *faceRepoImpl) GetFirstImage(ctx context.Context) ([]string, error) {
-	var filepaths []string
-
-	query := `SELECT file_path FROM face_image_path WHERE status="pending" LIMIT 5`
-
-	rows, err := r.db.QueryContext(ctx, query)
+// Get and Update status of x image to "processing".
+func (r *faceRepoImpl) GetFirstImage(ctx context.Context) ([]ImageFile, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return []string{}, err
+		return nil, err
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		var filepath string
-		err := rows.Scan(&filepath)
-		if err != nil {
-			return []string{}, err
+	var rec ImageFile
+
+	query := `
+			SELECT file_path, file_name
+			FROM face_image_path 
+			WHERE status="pending" 
+			LIMIT 1 
+			FOR UPDATE SKIP LOCKED`
+
+	row := tx.QueryRowContext(ctx, query)
+
+	if err := row.Scan(&rec.Path, &rec.Name); err != nil {
+		tx.Rollback()
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, sql.ErrNoRows
 		}
-		filepaths = append(filepaths, filepath)
+		return nil, err
 	}
 
-	if err := rows.Err(); err != nil {
-		return []string{}, err
+	// Mark as processing
+	updateQuery := `UPDATE face_image_path SET status='processing' WHERE file_name=?`
+	_, err = tx.ExecContext(ctx, updateQuery, &rec.Name)
+
+	if err != nil {
+		tx.Rollback()
+		return nil, err
 	}
 
-	return filepaths, nil
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return []ImageFile{rec}, nil
 }

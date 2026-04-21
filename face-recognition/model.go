@@ -33,5 +33,6 @@ type SubjectResponse struct {
 }
 
 type ImageFile struct {
-	Path string
+	Name string `json:"filename"`
+	Path string `json:"filepath"`
 }
