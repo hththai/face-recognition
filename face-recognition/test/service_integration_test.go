@@ -215,11 +215,11 @@ func TestInsertFaceAndImage(t *testing.T) {
 	// subject := "phoebe"
 	// img := "DSCF2778.JPG"
 
-	persons := []srv.Person{
+	persons := []*srv.Person{
 		{
 			Name: "phoebe",
 			Image: srv.Image{
-				Name: "DSCF2775.JPG",
+				Name: "DSCF2779.JPG",
 			},
 		},
 	}
@@ -303,30 +303,102 @@ func TestGetFacesService(t *testing.T) {
 
 }
 
-// func TestInsertFaceImageWithJsonRes (t *testing.T) {
-// sampleRes := [{
-//         "name": "phoebe",
-//         "image": {
-//             "Path": "/Volumes/Latte/PIC/2026/home/bris/0-face-recognition/convert-folder/DSCF2761.JPG",
-//             "Name": "DSCF2761.JPG"
-//         }
-//     },
-//     {
-//         "name": "vickie",
-//         "image": {
-//             "Path": "/Volumes/Latte/PIC/2026/home/bris/0-face-recognition/convert-folder/DSCF2775.JPG",
-//             "Name": "DSCF2775.JPG"
-//         }
-//     },
-//     {
-//         "name": "john",
-//         "image": {
-//             "Path": "/Volumes/Latte/PIC/2026/home/bris/0-face-recognition/convert-folder/DSCF2775.JPG",
-//             "Name": "DSCF2775.JPG"
-//         }
-//     }
-// ]
-// }
+// Test function insert with many Response
+func TestInsertFaceImageWithJsonRes(t *testing.T) {
+	jsonString := `[{
+			"name": "phoebe",
+			"image": {
+				"Path": "/Volumes/Latte/PIC/2026/home/bris/0-face-recognition/convert-folder/DSCF2761.JPG",
+				"Name": "DSCF2761.JPG"
+			}
+		},
+		{
+			"name": "vickie",
+			"image": {
+				"Path": "/Volumes/Latte/PIC/2026/home/bris/0-face-recognition/convert-folder/DSCF2775.JPG",
+				"Name": "DSCF2775.JPG"
+			}
+		},
+		{
+			"name": "john",
+			"image": {
+				"Path": "/Volumes/Latte/PIC/2026/home/bris/0-face-recognition/convert-folder/DSCF2775.JPG",
+				"Name": "DSCF2775.JPG"
+			}
+		}]
+		`
+
+	// Convert to Person
+	var people []*srv.Person
+	err := json.Unmarshal([]byte(jsonString), &people)
+	if err != nil {
+		t.Fatalf("failed to convert JSON to Person")
+	}
+
+	err = godotenv.Load("../../.env")
+	if err != nil {
+		t.Fatalf("Error loading .env file: %v", err)
+	}
+
+	// DB connection established
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := srv.NewFaceRepo(db)
+
+	affected, err := repo.InsertFaceAndImage(context.Background(), people)
+
+	if err != nil {
+		t.Fatalf("failed to insert %v", err)
+	}
+
+	fmt.Printf("insert success %d\n", affected)
+
+}
+
+// GetFaces and Insert to face image
+func TestGetFaceAndUpdateFaceToSubject(t *testing.T) {
+
+	err := godotenv.Load("../../.env")
+	if err != nil {
+		t.Fatalf("Error loading .env file: %v", err)
+	}
+
+	// DB connection established
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := srv.NewFaceRepo(db)
+
+	var memBefore, memAfter runtime.MemStats
+	runtime.ReadMemStats(&memBefore)
+	startTime := time.Now()
+
+	people, err := srv.GetFaces(context.Background(), repo, 50)
+	if err != nil {
+		t.Fatalf("failed to get faces: %v", err)
+	}
+
+	affected, err := repo.InsertFaceAndImage(context.Background(), people)
+
+	if err != nil {
+		t.Fatalf("failed to insert %v", err)
+	}
+
+	fmt.Printf("insert success %d\n", affected)
+
+	// jsonResult, err := json.MarshalIndent(persons, "", "    ")
+	// if err != nil {
+	// 	t.Fatalf("failed to marshal result to JSON: %v", err)
+	// }
+	// fmt.Printf("GetFacesService result:\n%s\n", jsonResult)
+
+	timeTaken := time.Since(startTime)
+	runtime.ReadMemStats(&memAfter)
+
+	fmt.Printf("\u001B[32mGetPathService took %v\n\u001B[0m", timeTaken)
+	fmt.Printf("\u001B[32mMemory used: %.2f MB\n\u001B[0m", float64(memAfter.Alloc-memBefore.Alloc)/(1024*1024))
+
+}
 
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()

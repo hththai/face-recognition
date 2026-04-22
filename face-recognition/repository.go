@@ -11,7 +11,7 @@ import (
 type FaceRepository interface {
 	InsertFaceSubject(ctx context.Context, subList []string) (int64, error)
 	InsertFilePath(ctx context.Context, images []ImageFile) (int64, error)
-	InsertFaceAndImage(ctx context.Context, persons []Person) (int64, error)
+	InsertFaceAndImage(ctx context.Context, persons []*Person) (int64, error)
 	GetImagesAndProcess(ctx context.Context, limit int) ([]ImageFile, error)
 }
 
@@ -105,7 +105,7 @@ func (r *faceRepoImpl) InsertFilePath(ctx context.Context, images []ImageFile) (
 	return affected, nil
 }
 
-func (r *faceRepoImpl) InsertFaceAndImage(ctx context.Context, persons []Person) (int64, error) {
+func (r *faceRepoImpl) InsertFaceAndImage(ctx context.Context, persons []*Person) (int64, error) {
 
 	tx, err := r.db.BeginTx(ctx, nil)
 
