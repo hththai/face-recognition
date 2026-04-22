@@ -1,11 +1,12 @@
 package facerecognition
 
 type Person struct {
-	Name  string
-	Image Image
+	Name  string `json:"name"`
+	Image Image  `json:"image"`
 }
 
 type Image struct {
+	Path string
 	Name string
 }
 

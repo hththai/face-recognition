@@ -19,101 +19,109 @@ import (
 // If return Ok, store metadata to database as Person
 // schema of return is Subject.
 // Map Subject to Person
-func GetFaceFromImage(path string) *Person {
+func GetFaceFromImage(path string) []*Person {
 	if path == "" {
 		return nil
 	}
 
-	// Open the image file
+	response, err := recognizeFaces(path)
+	if err != nil {
+		log.Printf("Error recognizing faces: %v", err)
+		return nil
+	}
+
+	image := Image{Name: filepath.Base(path), Path: path}
+	return distinctPersons(response.Result, image)
+}
+
+func recognizeFaces(path string) (*Response, error) {
+	body, contentType, err := buildMultipartBody(path)
+	if err != nil {
+		return nil, err
+	}
+
+	endpoint := os.Getenv("EXADEL_SERVICE_URL")
+	if endpoint == "" {
+		return nil, fmt.Errorf("EXADEL_SERVICE_URL is not set")
+	}
+
+	req, err := http.NewRequest("POST", endpoint, body)
+	if err != nil {
+		return nil, fmt.Errorf("creating request: %w", err)
+	}
+	req.Header.Add("x-api-key", os.Getenv("EXADEL_API_KEY"))
+	req.Header.Set("Content-Type", contentType)
+
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("sending request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading response: %w", err)
+	}
+	log.Printf("Response Body: %s", data)
+
+	var response Response
+	if err = json.Unmarshal(data, &response); err != nil {
+		return nil, fmt.Errorf("decoding response: %w", err)
+	}
+	return &response, nil
+}
+
+func buildMultipartBody(path string) (*bytes.Buffer, string, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		log.Printf("Error opening file: %v", err)
-		return nil
+		return nil, "", fmt.Errorf("opening file: %w", err)
 	}
 	defer file.Close()
 
-	// Create a new multipart writer to encode form data
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	// Create a form file part and copy the image content into it
 	part, err := writer.CreateFormFile("file", filepath.Base(path))
 	if err != nil {
-		log.Printf("Error creating form file part: %v", err)
-		return nil
+		return nil, "", fmt.Errorf("creating form file part: %w", err)
 	}
-	_, err = io.Copy(part, file)
-	if err != nil {
-		log.Printf("Error copying file content: %v", err)
-		return nil
+	if _, err = io.Copy(part, file); err != nil {
+		return nil, "", fmt.Errorf("copying file content: %w", err)
 	}
-
-	// Close the multipart writer
-	err = writer.Close()
-	if err != nil {
-		log.Printf("Error closing multipart writer: %v", err)
-		return nil
+	if err = writer.Close(); err != nil {
+		return nil, "", fmt.Errorf("closing multipart writer: %w", err)
 	}
+	return body, writer.FormDataContentType(), nil
+}
 
-	// Create a new HTTP request to the Exadel service
-	endpoint := os.Getenv("EXADEL_SERVICE_URL")
-	if endpoint == "" {
-		log.Printf("EXADEL_SERVICE_URL is not set")
-		return nil
-	}
-	req, err := http.NewRequest("POST", endpoint, body)
-	if err != nil {
-		log.Printf("Error creating request: %v", err)
-		return nil
-	}
-
-	// Add necessary headers
-	req.Header.Add("x-api-key", os.Getenv("EXADEL_API_KEY"))
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-
-	// Send the request and handle the response
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Printf("Error sending request: %v", err)
-		return nil
-	}
-	defer resp.Body.Close()
-
-	var response Response
-	// Read the response body into a string for logging
-	responseBodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("Error reading response: %v", err)
-		return nil
-	}
-	defer resp.Body.Close()
-	resp.Body = io.NopCloser(bytes.NewBuffer(responseBodyBytes))
-
-	log.Printf("Response Body: %s", responseBodyBytes)
-
-	err = json.NewDecoder(resp.Body).Decode(&response)
-	if err != nil {
-		log.Printf("Error decoding response: %v", err)
-		return nil
-	}
-
-	person := &Person{
-		Image: Image{
-			Name: path,
-		},
-	}
-
-	// Print the extracted Subject data
-	for _, result := range response.Result {
-		for _, subject := range result.Subjects {
-			log.Println("Subject:", subject.Subject, "Similarity:", subject.Similarity)
-
-			person.Name = subject.Subject
+func distinctPersons(results []Result, image Image) []*Person {
+	seen := make(map[string]float64)
+	for _, result := range results {
+		best := bestSubject(result.Subjects)
+		if best == nil {
+			continue
+		}
+		if sim, exists := seen[best.Subject]; !exists || best.Similarity > sim {
+			seen[best.Subject] = best.Similarity
 		}
 	}
 
-	return person
+	persons := make([]*Person, 0, len(seen))
+	for name, sim := range seen {
+		log.Printf("Subject: %s  Similarity: %.4f", name, sim)
+		persons = append(persons, &Person{Name: name, Image: image})
+	}
+	return persons
+}
+
+func bestSubject(subjects []Subject) *Subject {
+	var best *Subject
+	for i := range subjects {
+		if best == nil || subjects[i].Similarity > best.Similarity {
+			best = &subjects[i]
+		}
+	}
+	return best
 }
 
 func collectImagePaths(path string) ([]string, error) {
@@ -149,16 +157,15 @@ func scanWorkers(imagePaths []string, expectPerson string) <-chan scanResult {
 
 	var wg sync.WaitGroup
 	for range workers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for fp := range jobs {
-				p := GetFaceFromImage(fp)
-				if p != nil && p.Name == expectPerson {
-					results <- scanResult{p, fp}
+				for _, p := range GetFaceFromImage(fp) {
+					if p.Name == expectPerson {
+						results <- scanResult{p, fp}
+					}
 				}
 			}
-		}()
+		})
 	}
 
 	for _, fp := range imagePaths {
@@ -286,9 +293,9 @@ func GetFaces(ctx context.Context, repo FaceRepository, limit int) ([]*Person, e
 
 	var people []*Person
 	for _, imageRecord := range imageRecords {
-		person := GetFaceFromImage(imageRecord.Path)
-		fmt.Println("person is::: ", person)
-		people = append(people, person)
+		persons := GetFaceFromImage(imageRecord.Path)
+		log.Printf("image %s: %d face(s) detected", imageRecord.Name, len(persons))
+		people = append(people, persons...)
 	}
 
 	return people, nil

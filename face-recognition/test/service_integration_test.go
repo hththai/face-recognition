@@ -32,7 +32,7 @@ func (mh *MockHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 }
 
 const (
-	Image_Path = "/Volumes/Latte/PIC/2026/home/bris/0-face-recognition/convert-folder/DSCF2998.JPG"
+	Image_Path = "/Volumes/Latte/PIC/2026/home/bris/0-face-recognition/convert-folder/DSCF2750.JPG"
 )
 
 // TestGetFaceFromImageIntegration tests the GetFaceFromImage function.
@@ -52,12 +52,20 @@ func TestGetFaceFromImageIntegration(t *testing.T) {
 	testImagePath := Image_Path
 
 	// Call the function under test
-	person := srv.GetFaceFromImage(testImagePath)
+	persons := srv.GetFaceFromImage(testImagePath)
 
-	// Assert the results
-	assert.NotNil(t, person, "Expected a non-nil Person object")
-	assert.Equal(t, "phoebe", person.Name, "Expected name 'phoebe'")
-	assert.Equal(t, testImagePath, person.Image.Name, "Expected image path to match")
+	jsonResult, err := json.MarshalIndent(persons, "", "    ")
+	if err != nil {
+		t.Fatalf("failed to marshal result to JSON: %v", err)
+	}
+	fmt.Printf("persons:\n%s\n", jsonResult)
+
+	assert.NotEmpty(t, persons, "Expected at least one Person detected")
+	for _, person := range persons {
+		assert.NotEmpty(t, person.Name, "Expected a non-empty name")
+		assert.Equal(t, testImagePath, person.Image.Path, "Expected image path to match")
+	}
+	assert.Equal(t, "phoebe", persons[0].Name, "Expected first person name 'phoebe'")
 }
 
 // Test function
