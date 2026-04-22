@@ -105,34 +105,6 @@ func (r *faceRepoImpl) InsertFilePath(ctx context.Context, images []ImageFile) (
 	return affected, nil
 }
 
-// Insert into file_subject_image
-// func (r *faceRepoImpl) InsertFaceAndImage(ctx context.Context, subject string, images string) (int64, error) {
-
-// 	tx, err := r.db.BeginTx(ctx, nil)
-
-// 	if err != nil {
-// 		return 0, err
-// 	}
-
-// 	query := `
-// 	INSERT INTO face_subject_image (subject, file) VALUES (?,?)`
-
-// 	res, err := tx.ExecContext(ctx, query, subject, images)
-
-// 	if err != nil {
-// 		tx.Rollback()
-// 		return 0, err
-// 	}
-
-// 	if err := tx.Commit(); err != nil {
-// 		return 0, err
-// 	}
-
-// 	affected, _ := res.RowsAffected()
-
-// 	return affected, nil
-// }
-
 func (r *faceRepoImpl) InsertFaceAndImage(ctx context.Context, persons []Person) (int64, error) {
 
 	tx, err := r.db.BeginTx(ctx, nil)
