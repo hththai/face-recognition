@@ -11,7 +11,7 @@ import (
 type FaceRepository interface {
 	InsertFaceSubject(ctx context.Context, subList []string) (int64, error)
 	InsertFilePath(ctx context.Context, images []ImageFile) (int64, error)
-	InsertFaceAndImage(ctx context.Context, subject Subject, images string) (int64, error)
+	InsertFaceAndImage(ctx context.Context, persons []Person) (int64, error)
 	GetImagesAndProcess(ctx context.Context, limit int) ([]ImageFile, error)
 }
 
@@ -106,7 +106,34 @@ func (r *faceRepoImpl) InsertFilePath(ctx context.Context, images []ImageFile) (
 }
 
 // Insert into file_subject_image
-func (r *faceRepoImpl) InsertFaceAndImage(ctx context.Context, subject Subject, images string) (int64, error) {
+// func (r *faceRepoImpl) InsertFaceAndImage(ctx context.Context, subject string, images string) (int64, error) {
+
+// 	tx, err := r.db.BeginTx(ctx, nil)
+
+// 	if err != nil {
+// 		return 0, err
+// 	}
+
+// 	query := `
+// 	INSERT INTO face_subject_image (subject, file) VALUES (?,?)`
+
+// 	res, err := tx.ExecContext(ctx, query, subject, images)
+
+// 	if err != nil {
+// 		tx.Rollback()
+// 		return 0, err
+// 	}
+
+// 	if err := tx.Commit(); err != nil {
+// 		return 0, err
+// 	}
+
+// 	affected, _ := res.RowsAffected()
+
+// 	return affected, nil
+// }
+
+func (r *faceRepoImpl) InsertFaceAndImage(ctx context.Context, persons []Person) (int64, error) {
 
 	tx, err := r.db.BeginTx(ctx, nil)
 
@@ -114,10 +141,20 @@ func (r *faceRepoImpl) InsertFaceAndImage(ctx context.Context, subject Subject, 
 		return 0, err
 	}
 
-	query := `
-	INSERT INTO face_subject_image (subject, file) VALUES (?,?)`
+	var args []interface{}
+	valueStrings := make([]string, 0, len(persons))
 
-	res, err := tx.ExecContext(ctx, query, subject.Subject, images)
+	for _, person := range persons {
+		subject := person.Name
+		image := person.Image.Name
+		args = append(args, subject, image)
+		valueStrings = append(valueStrings, "(?, ?)")
+	}
+
+	query := fmt.Sprintf("INSERT INTO face_subject_image (subject, file) VALUES %s", strings.Join(valueStrings, ", "))
+	// `INSERT INTO face_subject_image (subject, file) VALUES (?,?)`
+
+	res, err := tx.ExecContext(ctx, query, args...)
 
 	if err != nil {
 		tx.Rollback()

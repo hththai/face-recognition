@@ -194,6 +194,12 @@ func TestInsertFilePathByService(t *testing.T) {
 	fmt.Printf("insert success %d\n", affected)
 }
 
+// Init the test DB
+func TestInitService(t *testing.T) {
+	TestGetFaceSubjects(t)
+	TestInsertFilePathByService(t)
+}
+
 // Test insert face and image
 func TestInsertFaceAndImage(t *testing.T) {
 	err := godotenv.Load("../../.env")
@@ -205,12 +211,22 @@ func TestInsertFaceAndImage(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	subject := srv.Subject{Subject: "phoebe"}
-	img := "DSCF2778.JPG"
+	// subject := srv.Subject{Subject: "phoebe"}
+	// subject := "phoebe"
+	// img := "DSCF2778.JPG"
+
+	persons := []srv.Person{
+		{
+			Name: "phoebe",
+			Image: srv.Image{
+				Name: "DSCF2775.JPG",
+			},
+		},
+	}
 
 	repo := srv.NewFaceRepo(db)
 
-	affected, err := repo.InsertFaceAndImage(context.Background(), subject, img)
+	affected, err := repo.InsertFaceAndImage(context.Background(), persons)
 
 	if err != nil {
 		t.Fatalf("failed to insert %v", err)
@@ -268,7 +284,7 @@ func TestGetFacesService(t *testing.T) {
 	runtime.ReadMemStats(&memBefore)
 	startTime := time.Now()
 
-	persons, err := srv.GetFaces(context.Background(), repo, 50)
+	persons, err := srv.GetFaces(context.Background(), repo, 300)
 	if err != nil {
 		t.Fatalf("failed to get faces: %v", err)
 	}
@@ -286,6 +302,31 @@ func TestGetFacesService(t *testing.T) {
 	fmt.Printf("\u001B[32mMemory used: %.2f MB\n\u001B[0m", float64(memAfter.Alloc-memBefore.Alloc)/(1024*1024))
 
 }
+
+// func TestInsertFaceImageWithJsonRes (t *testing.T) {
+// sampleRes := [{
+//         "name": "phoebe",
+//         "image": {
+//             "Path": "/Volumes/Latte/PIC/2026/home/bris/0-face-recognition/convert-folder/DSCF2761.JPG",
+//             "Name": "DSCF2761.JPG"
+//         }
+//     },
+//     {
+//         "name": "vickie",
+//         "image": {
+//             "Path": "/Volumes/Latte/PIC/2026/home/bris/0-face-recognition/convert-folder/DSCF2775.JPG",
+//             "Name": "DSCF2775.JPG"
+//         }
+//     },
+//     {
+//         "name": "john",
+//         "image": {
+//             "Path": "/Volumes/Latte/PIC/2026/home/bris/0-face-recognition/convert-folder/DSCF2775.JPG",
+//             "Name": "DSCF2775.JPG"
+//         }
+//     }
+// ]
+// }
 
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
