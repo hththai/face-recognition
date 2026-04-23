@@ -13,6 +13,7 @@ type FaceRepository interface {
 	InsertFilePath(ctx context.Context, images []ImageFile) (int64, error)
 	InsertFaceAndImage(ctx context.Context, persons []*Person) (int64, error)
 	GetImagesAndProcess(ctx context.Context, limit int) ([]ImageFile, error)
+	UpdateImageStatus(ctx context.Context, fileNames []string, status string) error
 }
 
 type faceRepoImpl struct {
@@ -140,6 +141,22 @@ func (r *faceRepoImpl) InsertFaceAndImage(ctx context.Context, persons []*Person
 	affected, _ := res.RowsAffected()
 
 	return affected, nil
+}
+
+func (r *faceRepoImpl) UpdateImageStatus(ctx context.Context, fileNames []string, status string) error {
+	if len(fileNames) == 0 {
+		return nil
+	}
+	placeholders := strings.Repeat("?,", len(fileNames))
+	placeholders = placeholders[:len(placeholders)-1]
+	args := make([]interface{}, len(fileNames)+1)
+	args[0] = status
+	for i, name := range fileNames {
+		args[i+1] = name
+	}
+	query := fmt.Sprintf("UPDATE face_image_path SET status=? WHERE file_name IN (%s)", placeholders)
+	_, err := r.db.ExecContext(ctx, query, args...)
+	return err
 }
 
 // Test Get dummy first value

@@ -293,19 +293,23 @@ func StoreFilePaths(ctx context.Context, filePath []ImageFile, repo FaceReposito
 // This service do is from each Path, it will send request by GetFaceFromImage(path string) and return *Person.
 // Each ImageFile in []ImageFile will send request and return the result.
 // Return all result as json response, or object response.
-func GetFaces(ctx context.Context, repo FaceRepository, limit int) ([]*Person, error) {
-	imageRecords, err := repo.GetImagesAndProcess(ctx, limit) // set limit 50
+func GetFaces(ctx context.Context, repo FaceRepository, limit int) ([]*Person, []string, error) {
+	imageRecords, err := repo.GetImagesAndProcess(ctx, limit)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+
+	fileNames := make([]string, len(imageRecords))
+	for i, img := range imageRecords {
+		fileNames[i] = img.Name
 	}
 
 	var people []*Person
-
 	for _, imageRecord := range imageRecords {
 		persons := GetFaceFromImage(imageRecord.Path)
 		log.Printf("image %s: %d face(s) detected", imageRecord.Name, len(persons))
 		people = append(people, persons...)
 	}
 
-	return people, nil
+	return people, fileNames, nil
 }

@@ -287,7 +287,7 @@ func TestGetFacesService(t *testing.T) {
 	runtime.ReadMemStats(&memBefore)
 	startTime := time.Now()
 
-	persons, err := srv.GetFaces(context.Background(), repo, 300)
+	persons, _, err := srv.GetFaces(context.Background(), repo, 300)
 	if err != nil {
 		t.Fatalf("failed to get faces: %v", err)
 	}
@@ -376,16 +376,25 @@ func TestGetFaceAndUpdateFaceToSubject(t *testing.T) {
 	runtime.ReadMemStats(&memBefore)
 	startTime := time.Now()
 
-	people, err := srv.GetFaces(context.Background(), repo, 50)
+	people, fileNames, err := srv.GetFaces(context.Background(), repo, 300)
 
 	if err != nil {
 		t.Fatalf("failed to get faces: %v", err)
 	}
 
-	affected, err := repo.InsertFaceAndImage(context.Background(), people)
+	affected, insertErr := repo.InsertFaceAndImage(context.Background(), people)
 
-	if err != nil {
-		t.Fatalf("failed to insert %v", err)
+	status := "completed"
+	if insertErr != nil {
+		status = "error"
+	}
+
+	if updateErr := repo.UpdateImageStatus(context.Background(), fileNames, status); updateErr != nil {
+		t.Fatalf("failed to update image status: %v", updateErr)
+	}
+
+	if insertErr != nil {
+		t.Fatalf("failed to insert: %v", insertErr)
 	}
 
 	fmt.Printf("insert success %d\n", affected)
