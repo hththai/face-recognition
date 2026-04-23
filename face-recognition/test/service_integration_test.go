@@ -32,7 +32,7 @@ func (mh *MockHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 }
 
 const (
-	Image_Path = "/Volumes/Latte/PIC/2026/home/bris/0-face-recognition/convert-folder/DSCF2750.JPG"
+	Image_Path = "/Volumes/Latte/PIC/2026/home/bris/0-face-recognition/convert-folder/DSCF2733.JPG"
 )
 
 // TestGetFaceFromImageIntegration tests the GetFaceFromImage function.
@@ -110,6 +110,9 @@ func TestGetFaceSubjects(t *testing.T) {
 
 	// Convert result from &[]string to []string
 	inputSubList := result.PersonName
+
+	// Add nobody to the list of subname.
+	inputSubList = append(inputSubList, "nobody")
 
 	fmt.Printf("converted to list string: %v\n", inputSubList)
 
@@ -374,6 +377,7 @@ func TestGetFaceAndUpdateFaceToSubject(t *testing.T) {
 	startTime := time.Now()
 
 	people, err := srv.GetFaces(context.Background(), repo, 50)
+
 	if err != nil {
 		t.Fatalf("failed to get faces: %v", err)
 	}

@@ -31,7 +31,7 @@ func GetFaceFromImage(path string) []*Person {
 	}
 
 	image := Image{Name: filepath.Base(path), Path: path}
-	return distinctPersons(response.Result, image)
+	return distinctPersons(response, image)
 }
 
 func recognizeFaces(path string) (*Response, error) {
@@ -68,6 +68,7 @@ func recognizeFaces(path string) (*Response, error) {
 	if err = json.Unmarshal(data, &response); err != nil {
 		return nil, fmt.Errorf("decoding response: %w", err)
 	}
+	response.StatusCode = resp.StatusCode
 	return &response, nil
 }
 
@@ -94,9 +95,16 @@ func buildMultipartBody(path string) (*bytes.Buffer, string, error) {
 	return body, writer.FormDataContentType(), nil
 }
 
-func distinctPersons(results []Result, image Image) []*Person {
+func distinctPersons(response *Response, image Image) []*Person {
+	if response.StatusCode == http.StatusBadRequest {
+		return []*Person{{
+			Name:  "nobody",
+			Image: image,
+		}}
+	}
+
 	seen := make(map[string]float64)
-	for _, result := range results {
+	for _, result := range response.Result {
 		best := bestSubject(result.Subjects)
 		if best == nil {
 			continue
@@ -292,6 +300,7 @@ func GetFaces(ctx context.Context, repo FaceRepository, limit int) ([]*Person, e
 	}
 
 	var people []*Person
+
 	for _, imageRecord := range imageRecords {
 		persons := GetFaceFromImage(imageRecord.Path)
 		log.Printf("image %s: %d face(s) detected", imageRecord.Name, len(persons))

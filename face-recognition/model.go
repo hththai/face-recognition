@@ -12,7 +12,8 @@ type Image struct {
 
 // Define the minimal structs needed to extract Subject information
 type Response struct {
-	Result []Result `json:"result"`
+	StatusCode int
+	Result     []Result `json:"result"`
 }
 
 type Result struct {
