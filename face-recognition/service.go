@@ -62,7 +62,7 @@ func recognizeFaces(path string) (*Response, error) {
 	if err != nil {
 		return nil, fmt.Errorf("reading response: %w", err)
 	}
-	log.Printf("Response Body: %s", data)
+	// log.Printf("Response Body: %s", data)
 
 	var response Response
 	if err = json.Unmarshal(data, &response); err != nil {
@@ -115,8 +115,8 @@ func distinctPersons(response *Response, image Image) []*Person {
 	}
 
 	persons := make([]*Person, 0, len(seen))
-	for name, sim := range seen {
-		log.Printf("Subject: %s  Similarity: %.4f", name, sim)
+	for name := range seen {
+		// log.Printf("Subject: %s  Similarity: %.4f", name, sim)
 		persons = append(persons, &Person{Name: name, Image: image})
 	}
 	return persons
@@ -294,6 +294,9 @@ func StoreFilePaths(ctx context.Context, filePath []ImageFile, repo FaceReposito
 // Each ImageFile in []ImageFile will send request and return the result.
 // Return all result as json response, or object response.
 func GetFaces(ctx context.Context, repo FaceRepository, limit int) ([]*Person, []string, error) {
+
+	const workers = 5
+
 	imageRecords, err := repo.GetImagesAndProcess(ctx, limit)
 	if err != nil {
 		return nil, nil, err
@@ -304,10 +307,45 @@ func GetFaces(ctx context.Context, repo FaceRepository, limit int) ([]*Person, [
 		fileNames[i] = img.Name
 	}
 
+	// *** Add work group ***
+	jobs := make(chan ImageFile, len(imageRecords))
+	results := make(chan []*Person, len(imageRecords))
+
+	var wg sync.WaitGroup
+
+	for range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done() // Reduce worker
+			for img := range jobs {
+				if ctx.Err() != nil {
+					return
+				}
+				results <- GetFaceFromImage(img.Path)
+			}
+		}()
+	}
+
+	for _, img := range imageRecords {
+		jobs <- img
+	}
+	close(jobs)
+
+	// Close wg after all workers are done
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+	// -------------
+
 	var people []*Person
-	for _, imageRecord := range imageRecords {
-		persons := GetFaceFromImage(imageRecord.Path)
-		log.Printf("image %s: %d face(s) detected", imageRecord.Name, len(persons))
+	// for _, imageRecord := range imageRecords {
+	// 	persons := GetFaceFromImage(imageRecord.Path)
+	// 	// log.Printf("image %s: %d face(s) detected", imageRecord.Name, len(persons))
+	// 	people = append(people, persons...)
+	// }
+
+	for persons := range results {
 		people = append(people, persons...)
 	}
 
