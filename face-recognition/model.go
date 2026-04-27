@@ -38,3 +38,9 @@ type ImageFile struct {
 	Name string `json:"filename"`
 	Path string `json:"filepath"`
 }
+
+// DTO return list of paths related to a subject
+type SubjectFilesDTO struct {
+	Subject   string   `json:"subject"`
+	FileNames []string `json:"filenames"`
+}

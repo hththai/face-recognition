@@ -413,6 +413,30 @@ func TestGetFaceAndUpdateFaceToSubject(t *testing.T) {
 
 }
 
+// Test get files for a subject
+func TestGetFilesBySubject(t *testing.T) {
+	err := godotenv.Load("../../.env")
+	if err != nil {
+		t.Fatalf("Error loading .env file: %v", err)
+	}
+
+	// DB connection established
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := srv.NewFaceRepo(db)
+
+	person := "john"
+	result, err := repo.GetFilesBySubject(context.Background(), person)
+
+	if err != nil {
+		t.Fatalf("failed to get person and file by subject: %v", err)
+		return
+	}
+
+	fmt.Print("list of files for person:\n", result)
+
+}
+
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 

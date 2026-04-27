@@ -352,7 +352,7 @@ func GetFaces(ctx context.Context, repo FaceRepository, limit int) ([]*Person, [
 	return people, fileNames, nil
 }
 
-// / from name files, subject, and path file source.
+// from name files, subject, and path file source.
 // Copy the image to folder which is the name of subject if not exists.
 // source file is /.../home/ and file name id DSCF2999.JPG,
 // for each file name the funciton will copy it to destination path and folder on the subject name

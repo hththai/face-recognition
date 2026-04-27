@@ -14,6 +14,7 @@ type FaceRepository interface {
 	InsertFaceAndImage(ctx context.Context, persons []*Person) (int64, error)
 	GetImagesAndProcess(ctx context.Context, limit int) ([]ImageFile, error)
 	UpdateImageStatus(ctx context.Context, fileNames []string, status string) error
+	GetFilesBySubject(ctx context.Context, subject string) (*SubjectFilesDTO, error)
 }
 
 type faceRepoImpl struct {
@@ -216,4 +217,37 @@ func (r *faceRepoImpl) GetImagesAndProcess(ctx context.Context, limit int) ([]Im
 	}
 
 	return images, nil
+}
+
+// Get list Person
+func (r *faceRepoImpl) GetFilesBySubject(ctx context.Context, subject string) (*SubjectFilesDTO, error) {
+	query := `SELECT file FROM face_subject_image WHERE subject=?`
+
+	rows, err := r.db.QueryContext(ctx, query, subject)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	dto := &SubjectFilesDTO{
+		Subject:   subject,
+		FileNames: []string{},
+	}
+
+	for rows.Next() {
+		var file string
+
+		if err := rows.Scan(&file); err != nil {
+			return dto, err
+		}
+		dto.FileNames = append(dto.FileNames, file)
+	}
+
+	if err = rows.Err(); err != nil {
+		return dto, err
+	}
+
+	return dto, nil
+
 }
