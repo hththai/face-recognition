@@ -351,3 +351,56 @@ func GetFaces(ctx context.Context, repo FaceRepository, limit int) ([]*Person, [
 
 	return people, fileNames, nil
 }
+
+// / from name files, subject, and path file source.
+// Copy the image to folder which is the name of subject if not exists.
+// source file is /.../home/ and file name id DSCF2999.JPG,
+// for each file name the funciton will copy it to destination path and folder on the subject name
+// destination path as parameter /.../home/subjectname/DSCF2999.JPG
+func HandleStoreImageToFolder(person Person, src, dst string) error {
+	srcImage := filepath.Join(src, person.Image.Name)
+
+	dstFolder := filepath.Join(dst, person.Name)
+
+	if err := os.MkdirAll(dstFolder, 0755); err != nil {
+		return fmt.Errorf("failed to create destination folder: %w", err)
+	}
+	dstImage := filepath.Join(dstFolder, person.Image.Name)
+
+	if err := copyFile(srcImage, dstImage); err != nil {
+		return fmt.Errorf("failed to copy image %s: %w", person.Image.Name, err)
+	}
+	return nil
+}
+
+func copyFile(src, dst string) error {
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	// Create the destination directory if it doesn't exist
+	err = os.MkdirAll(filepath.Dir(dst), 0755)
+	if err != nil {
+		return err
+	}
+
+	destFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, sourceFile)
+	if err != nil {
+		return err
+	}
+
+	err = destFile.Sync()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
