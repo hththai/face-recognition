@@ -352,6 +352,29 @@ func GetFaces(ctx context.Context, repo FaceRepository, limit int) ([]*Person, [
 	return people, fileNames, nil
 }
 
+func HandleStoreImages(subFileDTO *SubjectFilesDTO, src, dst string) error {
+	if subFileDTO == nil {
+		return fmt.Errorf("nil SubjectFileDTO")
+	}
+
+	dstFolder := filepath.Join(dst, subFileDTO.Subject)
+
+	if err := os.MkdirAll(dstFolder, 0755); err != nil {
+		return fmt.Errorf("failed to create subject folder : %w", err)
+	}
+
+	for _, filename := range subFileDTO.FileNames {
+		srcPath := filepath.Join(src, filename)
+		dstPath := filepath.Join(dstFolder, filename)
+
+		if err := copyFile(srcPath, dstPath); err != nil {
+			return fmt.Errorf("failed to copy %s: %w", filename, err)
+		}
+	}
+
+	return nil
+}
+
 // from name files, subject, and path file source.
 // Copy the image to folder which is the name of subject if not exists.
 // source file is /.../home/ and file name id DSCF2999.JPG,

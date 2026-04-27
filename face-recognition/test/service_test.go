@@ -74,3 +74,51 @@ func TestHandleStoreImageToFolder(t *testing.T) {
 		t.Errorf("Expected file to exist at %s but it does not", dstFile)
 	}
 }
+
+func TestHandleStoreImages(t *testing.T) {
+	// Create temp working directory for this test
+	workDir, err := os.MkdirTemp(".", "test_handle_store_images")
+	if err != nil {
+		t.Fatalf("failed to create working temp dir: %v", err)
+	}
+	defer os.RemoveAll(workDir)
+
+	// Create src and dst folders inside working dir
+	srcDir := filepath.Join(workDir, "src")
+	dstDir := filepath.Join(workDir, "dst")
+
+	if err := os.MkdirAll(srcDir, 0755); err != nil {
+		t.Fatalf("failed to create src dir: %v", err)
+	}
+	if err := os.MkdirAll(dstDir, 0755); err != nil {
+		t.Fatalf("failed to create dst dir: %v", err)
+	}
+
+	// Create fake files in src
+	files := []string{"a.jpg", "b.jpg", "c.jpg"}
+	for _, f := range files {
+		err := os.WriteFile(filepath.Join(srcDir, f), []byte("fake image"), 0644)
+		if err != nil {
+			t.Fatalf("failed to create src file %s: %v", f, err)
+		}
+	}
+
+	dto := &srv.SubjectFilesDTO{
+		Subject:   "John",
+		FileNames: files,
+	}
+
+	// Run the function
+	err = srv.HandleStoreImages(dto, srcDir, dstDir)
+	if err != nil {
+		t.Fatalf("HandleStoreImages returned error: %v", err)
+	}
+
+	// Validate: all files must exist in dst/John/
+	for _, f := range files {
+		dstPath := filepath.Join(dstDir, dto.Subject, f)
+		if _, err := os.Stat(dstPath); err != nil {
+			t.Errorf("expected file %s to exist but got error: %v", dstPath, err)
+		}
+	}
+}
