@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
@@ -434,6 +435,54 @@ func TestGetFilesBySubject(t *testing.T) {
 	}
 
 	fmt.Print("list of files for person:\n", result)
+
+}
+
+func TestStoreImageToSubjectFolderService(t *testing.T) {
+
+	err := godotenv.Load("../../.env")
+	if err != nil {
+		t.Fatalf("Error loading .env file: %v", err)
+	}
+
+	// DB connection established
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := srv.NewFaceRepo(db)
+
+	subjects := []string{"john", "huy", "phoebe", "vickie"}
+
+	src := "../../original-images/all/"
+
+	// Create temp working directory for this test
+	workDir, err := os.MkdirTemp(".", "test_handle_store_images")
+	if err != nil {
+		t.Fatalf("failed to create working temp dir: %v", err)
+	}
+	defer os.RemoveAll(workDir)
+
+	dst := filepath.Join(workDir, "dst")
+
+	if err := os.MkdirAll(dst, 0755); err != nil {
+		t.Fatalf("failed to create dst dir: %v", err)
+	}
+
+	var memBefore, memAfter runtime.MemStats
+	runtime.ReadMemStats(&memBefore)
+	startTime := time.Now()
+
+	err = srv.StoreImageToSubjectFolder(context.Background(), repo, subjects, src, dst)
+
+	if err != nil {
+		t.Fatalf("failed to store images to folder: %v", err)
+	}
+
+	timeTaken := time.Since(startTime)
+	runtime.ReadMemStats(&memAfter)
+
+	fmt.Printf("\u001B[32mStoreImageToSubjectFolderService took %v\n\u001B[0m", timeTaken)
+	fmt.Printf("\u001B[32mMemory used: %.2f MB\n\u001B[0m", float64(memAfter.Alloc-memBefore.Alloc)/(1024*1024))
 
 }
 

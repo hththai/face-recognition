@@ -352,6 +352,35 @@ func GetFaces(ctx context.Context, repo FaceRepository, limit int) ([]*Person, [
 	return people, fileNames, nil
 }
 
+// Service to classify image to folders from repo
+func StoreImageToSubjectFolder(ctx context.Context, repo FaceRepository, subjects []string, src, dst string) error {
+	if len(subjects) == 0 {
+		return fmt.Errorf("invalid subject list")
+	}
+
+	var subjectDtos []*SubjectFilesDTO
+	// Get list of images from repo via a subject
+	for _, subject := range subjects {
+		subjectDto, err := repo.GetFilesBySubject(ctx, subject)
+		if err != nil {
+			return fmt.Errorf("failed to get filename of %s with error %v", subject, err)
+		}
+
+		subjectDtos = append(subjectDtos, subjectDto)
+	}
+
+	// handle file store of each subject
+	for _, subjectDto := range subjectDtos {
+		err := HandleStoreImages(subjectDto, src, dst)
+		if err != nil {
+			return fmt.Errorf("failed to store images of %s with error %v ", subjectDto.Subject, err)
+		}
+	}
+
+	return nil
+}
+
+// Get list of file names related to a subject
 func HandleStoreImages(subFileDTO *SubjectFilesDTO, src, dst string) error {
 	if subFileDTO == nil {
 		return fmt.Errorf("nil SubjectFileDTO")
