@@ -6,3 +6,4 @@ original-images/*
 test.http
 myproject
 **/file.txt
+classified*/**
