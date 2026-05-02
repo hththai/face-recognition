@@ -6,14 +6,14 @@ This project aims to implement a face recognition system using Go and MySQL data
 3. Store image based on subject name
 
 # Tech
-- Go 1.25.0\
+- Go 1.25.0
     - Benefit with channel work pool to cut down the I/O process 60%
-- MySQL 8.0.32\ 
-- Local compreface service\
+- MySQL 8.0.32
+- Local compreface service
 
 # Plans
-- Local AI training service to replace compreface\
-- Emplement gRPC protobuf\
+- Local AI training service to replace compreface
+- Emplement gRPC protobuf
 
 # Project Structure
 ```
