@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package person;
+
+option go_package="myproject/face-recognition/grpc";
+
+message Person {
+    string name = 1;
+    bytes image = 2; // Using bytes for image data
+}
+
+service FaceRecognitionService {
+    rpc AddPerson (Person) returns (Person);
+    rpc GetPersonByName (NameRequest) returns (Person);
+}
+
+message NameRequest {
+    string name = 1;
+}
