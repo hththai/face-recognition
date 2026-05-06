@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package facerecognition;
+
+option go_package = "myproject/face-recognition/grpc";
+
+// --- Messages ---
+
+message RecognizeRequest {
+    string file_path = 1;
+}
+
+message RecognizedPerson {
+    string subject   = 1;
+    string file_name = 2;
+}
+
+message RecognizeResponse {
+    repeated RecognizedPerson persons = 1;
+}
+
+message SubjectRequest {
+    string subject = 1;
+}
+
+message SubjectFilesResponse {
+    string          subject   = 1;
+    repeated string filenames = 2;
+}
+
+// --- Service ---
+
+service FaceRecognitionService {
+    // Unary: recognize faces in a single image and store results
+    rpc RecognizeImage (RecognizeRequest) returns (RecognizeResponse);
+
+    // Unary: get all file names linked to a subject
+    rpc GetSubjectFiles (SubjectRequest) returns (SubjectFilesResponse);
+
+    // Bidirectional streaming: client streams image paths, server streams results back as each is processed
+    rpc RecognizeBatch (stream RecognizeRequest) returns (stream RecognizeResponse);
+}

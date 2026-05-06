@@ -1,14 +1,15 @@
 package main
 
 import (
-	"context"
 	"log"
 	"os"
-	"path/filepath"
+	"os/signal"
+	"syscall"
 
 	"github.com/joho/godotenv"
 
 	facerecognition "myproject/face-recognition"
+	grpcserver "myproject/face-recognition/grpc/server"
 	"myproject/face-recognition/repo"
 )
 
@@ -37,29 +38,39 @@ func main() {
 		log.Fatalf("schema init: %v", err)
 	}
 
-	repo := facerecognition.NewFaceRepo(db)
+	faceRepo := facerecognition.NewFaceRepo(db)
 	log.Println("db connected and schema ready")
 
-	subjects := []string{"phoebe", "vickie"}
+	// --- batch job (commented out while gRPC server is active) ---
+	// subjects := []string{"phoebe", "vickie"}
+	// src := "./original-images/all/"
+	// workDir, err := os.MkdirTemp(".", "classified")
+	// if err != nil {
+	// 	log.Fatalf("failed to create working temp dir: %v", err)
+	// }
+	// dst := filepath.Join(workDir, "dst")
+	// if err := facerecognition.StoreImageToSubjectFolder(context.Background(), faceRepo, subjects, src, dst); err != nil {
+	// 	log.Fatalf("failed to copy files: %v", err)
+	// }
+	// log.Println("completed")
 
-	src := "./original-images/all/"
-
-	// Create temp working directory for this test
-	workDir, err := os.MkdirTemp(".", "classified")
-	if err != nil {
-		log.Fatalf("failed to create working temp dir: %v", err)
-	}
-	// defer os.RemoveAll(workDir)
-
-	dst := filepath.Join(workDir, "dst")
-
-	err = facerecognition.StoreImageToSubjectFolder(context.Background(), repo, subjects, src, dst)
-
-	if err != nil {
-		log.Fatalf("failed to copy files: %v", err)
-		return
+	addr := os.Getenv("GRPC_ADDR")
+	if addr == "" {
+		addr = ":50051"
 	}
 
-	log.Println("completed")
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- grpcserver.Run(addr, faceRepo)
+	}()
+
+	select {
+	case err := <-errCh:
+		log.Fatalf("gRPC server error: %v", err)
+	case sig := <-stop:
+		log.Printf("received %s, shutting down", sig)
+	}
 }
