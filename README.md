@@ -36,3 +36,6 @@ This project aims to implement a face recognition system using Go and MySQL data
 ├── service.go
 └──main.go
 ```
+# Second Method 
+- Use Vector Database QDrant and GPU to leverage the process of image classification by person
+- Process 280 images couple seconds.
